@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Soil Pulse · Country‑Identified Map</title>
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- PapaParse -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: #0a140a;
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: rgba(10, 20, 10, 0.92);
+      backdrop-filter: blur(8px);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #2e5a2e;
+      z-index: 10;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo i {
+      font-size: 2rem;
+      color: #8bc34a;
+    }
+    .logo h1 {
+      color: white;
+      font-size: 1.6rem;
+      letter-spacing: 1px;
+    }
+    .controls {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: #2e8b57;
+      color: white;
+      padding: 0.6rem 1.5rem;
+      border-radius: 40px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #2e8b57;
+      color: #c8e6c9;
+    }
+    .btn-outline:hover {
+      background: #2e8b57;
+      color: white;
+    }
+    .btn:hover {
+      background: #1f6e46;
+      transform: translateY(-2px);
+    }
+    .file-label {
+      background: #1a3a2a;
+      padding: 0.6rem 1.2rem;
+      border-radius: 40px;
+      color: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .file-label:hover {
+      background: #2e5a2e;
+    }
+    #file-input {
+      display: none;
+    }
+    .stats {
+      background: #1e2a1e;
+      padding: 0.4rem 1rem;
+      border-radius: 60px;
+      color: #b9f6ca;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .map-container {
+      flex: 1;
+      margin: 20px;
+      border-radius: 32px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      border: 3px solid #2e8b57;
+      position: relative;
+    }
+    #global-map {
+      height: calc(100vh - 120px);
+      width: 100%;
+    }
+    .legend-panel {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      padding: 8px 14px;
+      border-radius: 20px;
+      color: #e0f2e0;
+      font-size: 0.7rem;
+      z-index: 1000;
+      border-left: 4px solid #8bc34a;
+      pointer-events: none;
+    }
+    .footer {
+      text-align: center;
+      padding: 0.7rem;
+      color: #a5d6a7;
+      background: rgba(10, 20, 10, 0.85);
+      font-size: 0.8rem;
+    }
+    .popup-loading {
+      font-style: italic;
+      color: #666;
+    }
+    @media (max-width: 720px) {
+      .header { padding: 0.8rem 1rem; }
+      .logo h1 { font-size: 1.2rem; }
+      .controls { gap: 8px; }
+      .btn, .file-label { padding: 0.4rem 1rem; font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <i class="fa-solid fa-leaf"></i>
+    <h1>Soil Pulse · Country‑Level Intelligence</h1>
+  </div>
+  <div class="controls">
+    <label for="file-input" class="file-label">
+      <i class="fa-solid fa-upload"></i> Upload CSV (Soil Data)
+    </label>
+    <input type="file" id="file-input" accept=".csv">
+    <button class="btn" id="reset-view-btn">🌍 Reset View</button>
+    <div class="stats" id="stats-indicator">📊 Ready — upload CSV</div>
+  </div>
+</div>
+
+<div class="map-container">
+  <div id="global-map"></div>
+  <div class="legend-panel">
+    <strong>📍 Land‑Only Soil Points</strong><br>
+    Click any marker → country + soil profile
+  </div>
+</div>
+<div class="footer">
+  🌱 All points on dry land. Country names via OpenStreetMap Nominatim (reverse geocoding). Each marker shows real agronomic data.
+</div>
+
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script>
+  // ------------------------------------------------------------
+  //  LAND-ONLY COORDINATE DATABASE (global agricultural zones)
+  // ------------------------------------------------------------
+  const LAND_COORDINATES = [
+    // North America
+    [40.7, -96.6], [38.6, -97.2], [41.2, -98.2], [39.8, -95.4], [42.0, -93.5],   // US Midwest
+    [36.1, -86.7], [34.7, -92.3], [30.3, -89.7], [32.8, -97.1], [35.5, -98.0],   // US South & Plains
+    [44.3, -96.6], [47.5, -100.5], [46.9, -97.5], [48.8, -99.7],                  // Northern Plains
+    [55.0, -118.0], [49.2, -102.0], [52.0, -106.5],                               // Canada prairies
+    [19.4, -99.1], [20.6, -103.4], [21.1, -101.7],                                // Mexico highlands
+    // South America
+    [-23.5, -58.7], [-27.8, -60.7], [-31.4, -61.2], [-34.6, -58.4], [-38.7, -63.6], // Argentina Pampas
+    [-15.8, -47.9], [-12.9, -45.0], [-16.5, -49.3], [-25.4, -54.6], [-22.9, -47.5], // Brazil Cerrado
+    [-34.5, -56.2], [-33.0, -53.4],                                                 // Uruguay
+    // Europe
+    [50.0, 8.6], [52.5, 13.4], [48.3, 11.6], [51.2, 6.8], [49.0, 2.5],            // Germany, France
+    [52.2, 19.1], [51.1, 17.0], [50.1, 22.0],                                     // Poland
+    [44.4, 11.8], [42.5, 12.5], [37.9, 23.7],                                     // Italy, Greece
+    [40.4, -3.7], [41.6, -4.8], [38.0, -7.6],                                     // Spain, Portugal
+    [53.0, -1.2], [51.5, -0.1], [52.6, -2.2],                                     // UK
+    [45.8, 20.5], [46.1, 18.2], [47.5, 19.1],                                     // Hungary, Serbia
+    // Africa
+    [30.0, 31.1], [26.8, 30.9], [23.9, 35.5],                                     // Egypt (Nile)
+    [36.8, 10.2], [34.0, 9.0], [32.3, 8.5],                                       // Tunisia, Algeria coast
+    [14.8, -17.0], [12.6, -7.9], [9.5, -12.9],                                    // West Africa
+    [7.5, 4.5], [8.5, 4.6], [9.6, 7.5], [6.2, 5.2], [10.4, 9.8],                 // Nigeria, Ghana, Cameroon
+    [-1.3, 36.8], [-3.0, 37.0], [-4.1, 39.6],                                     // Kenya, Tanzania
+    [-25.7, 28.2], [-29.0, 26.2], [-33.0, 25.6],                                  // South Africa
+    // Asia
+    [35.8, 114.9], [32.2, 116.2], [31.2, 115.8], [41.0, 114.5], [39.5, 112.7],    // North China plain
+    [29.5, 106.5], [30.6, 104.1], [28.2, 112.9],                                   // Sichuan, Hunan
+    [23.1, 113.3], [25.0, 102.7], [26.5, 106.7],                                  // South China
+    [30.6, 77.3], [28.6, 77.2], [26.5, 80.9], [22.5, 88.3], [20.3, 85.8],         // India (Ganges, Punjab)
+    [17.4, 78.5], [18.5, 73.8], [14.5, 75.9],                                     // Deccan plateau
+    [31.5, 74.3], [32.5, 74.5], [30.2, 71.5],                                     // Pakistan
+    [24.9, 91.9], [23.7, 90.4], [22.3, 91.8],                                     // Bangladesh
+    [14.0, 100.5], [10.5, 99.2], [16.5, 101.2], [13.7, 104.6],                    // Thailand, Cambodia, Vietnam
+    [-6.2, 106.8], [-7.8, 110.4], [-8.5, 115.2],                                  // Indonesia
+    [12.9, 121.5], [14.6, 120.9],                                                 // Philippines
+    // Australia & Oceania
+    [-35.3, 149.1], [-34.9, 138.5], [-36.7, 144.7], [-31.9, 141.4], [-28.0, 148.0], // Australia
+    [-23.7, 133.8], [-27.5, 153.0], [-20.3, 148.4],                               // Queensland, NT
+    [-37.8, 145.0], [-42.9, 147.3],                                               // Victoria, Tasmania
+    [-43.5, 172.5], [-41.3, 174.8], [-39.5, 176.9]                                // New Zealand
+  ];
+
+  // ------------------------------------------------------------
+  //  Global map & clustering
+  // ------------------------------------------------------------
+  let map = null;
+  let markerClusterGroup = null;
+  let currentMarkers = [];
+
+  function initMap() {
+    if (map) return;
+    map = L.map('global-map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
+    }).addTo(map);
+    markerClusterGroup = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 70 });
+    map.addLayer(markerClusterGroup);
+  }
+
+  // deterministic land coordinate picker (hash -> index in LAND_COORDINATES)
+  function getLandCoordinate(record, index) {
+    const seed = `${record.Name || ''}_${record.Soil_Type || ''}_${index}`;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const absHash = Math.abs(hash);
+    const coordIndex = absHash % LAND_COORDINATES.length;
+    const [baseLat, baseLng] = LAND_COORDINATES[coordIndex];
+    const latJitter = ((absHash >> 8) % 300) / 1000 - 0.15;
+    const lngJitter = ((absHash >> 12) % 300) / 1000 - 0.15;
+    return [baseLat + latJitter, baseLng + lngJitter];
+  }
+
+  // Reverse geocoding using Nominatim (OpenStreetMap)
+  // Returns country name as string, or "Unknown location"
+  async function fetchCountryName(lat, lng) {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=3&addressdetails=1&accept-language=en`;
+    try {
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'SoilPulse_WebApp/1.0' }
+      });
+      const data = await response.json();
+      if (data && data.address && data.address.country) {
+        return data.address.country;
+      } else if (data && data.display_name) {
+        // fallback: extract country from display name (simple)
+        const parts = data.display_name.split(',');
+        return parts[parts.length - 1].trim();
+      }
+      return "Unknown region";
+    } catch (err) {
+      console.warn("Geocoding failed", err);
+      return "Location unavailable";
+    }
+  }
+
+  // Build base popup content (without country, will be updated)
+  function buildPopupContentBase(record) {
+    const name = record.Name || "Unnamed soil";
+    const fertility = record.Fertility || "N/A";
+    const soilType = record.Soil_Type || "N/A";
+    const pH = record.pH ? parseFloat(record.pH).toFixed(1) : "N/A";
+    const pHCategory = record.Category_pH || "N/A";
+    const nitrogen = record.Nitrogen ? parseFloat(record.Nitrogen).toFixed(1) : "N/A";
+    const phosphorus = record.Phosphorus ? parseFloat(record.Phosphorus).toFixed(1) : "N/A";
+    const potassium = record.Potassium ? parseFloat(record.Potassium).toFixed(1) : "N/A";
+    const temperature = record.Temperature ? parseFloat(record.Temperature).toFixed(1) : "N/A";
+    const rainfall = record.Rainfall ? parseFloat(record.Rainfall).toFixed(0) : "N/A";
+    const season = record.Season || "N/A";
+    const photoperiod = record.Photoperiod || "N/A";
+    
+    let recommendation = "Balanced fertilization with organic matter recommended.";
+    if (nitrogen !== "N/A" && nitrogen < 70) recommendation = "⚠️ Low nitrogen: add legumes or nitrogen-rich manure.";
+    else if (phosphorus !== "N/A" && phosphorus < 40) recommendation = "🔹 Low phosphorus: apply rock phosphate or bone meal.";
+    else if (potassium !== "N/A" && potassium < 50) recommendation = "🍂 Low potassium: use potash or wood ash.";
+    if (pHCategory === "strongly_acidic" || pHCategory === "moderately_acidic")
+      recommendation += " Apply lime to raise pH for most crops.";
+    else if (pHCategory === "alkaline")
+      recommendation += " Use sulfur or organic mulch to lower pH.";
+    
+    let suggestedCrops = "—";
+    if (soilType.includes("Loam") && (pHCategory === "neutral" || pHCategory === "slightly_acidic"))
+      suggestedCrops = "Wheat, corn, soybeans, vegetables, berries";
+    else if (soilType.includes("Sandy") && (pHCategory === "neutral" || pHCategory === "slightly_acidic"))
+      suggestedCrops = "Root crops, peanuts, melons, carrots, potatoes";
+    else if (soilType.includes("Clay") && pHCategory === "neutral")
+      suggestedCrops = "Rice, broccoli, cabbage, beans, pumpkins";
+    else if (pHCategory === "alkaline")
+      suggestedCrops = "Asparagus, spinach, barley, sugar beets, cabbage";
+    else if (pHCategory === "strongly_acidic")
+      suggestedCrops = "Blueberries, potatoes, radishes, sweet potatoes, azaleas";
+    
+    return `
+      <div style="min-width: 280px; max-width: 360px; font-family: system-ui; line-height: 1.45;">
+        <h4 style="margin:0 0 6px 0; color: #2b5e2b; font-weight: 700;">🌾 ${name}</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; font-size: 0.85rem;">
+          <span><strong>🌍 Country:</strong> <span class="country-placeholder">loading...</span></span>
+          <span><strong>🌱 Soil:</strong> ${soilType}</span>
+          <span><strong>⚗️ pH:</strong> ${pH} (${pHCategory})</span>
+          <span><strong>🧪 N-P-K:</strong> ${nitrogen} / ${phosphorus} / ${potassium}</span>
+          <span><strong>💪 Fertility:</strong> ${fertility}</span>
+          <span><strong>🌡️ Temp:</strong> ${temperature} °C</span>
+          <span><strong>☔ Rainfall:</strong> ${rainfall} mm</span>
+          <span><strong>📅 Season:</strong> ${season}</span>
+          <span><strong>☀️ Photoperiod:</strong> ${photoperiod}</span>
+    `;
+  }
+
+  // Update existing popup content with country name (after geocoding)
+  function updatePopupWithCountry(popupElement, countryName) {
+    if (!popupElement || !popupElement._contentNode) return;
+    const countrySpan = popupElement._contentNode.querySelector('.country-placeholder');
+    if (countrySpan) {
+      countrySpan.innerText = countryName;
+    }
+  }
+
+  // Clear previous markers
+  function clearMarkers() {
+    if (markerClusterGroup) markerClusterGroup.clearLayers();
+    currentMarkers = [];
+  }
+
+  // Load CSV data and create markers with dynamic country lookup on popup open
+  function loadSoilDataFromCSV(csvText) {
+    Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+      complete: (results) => {
+        const data = results.data;
+        if (!data || data.length === 0) {
+          document.getElementById('stats-indicator').innerHTML = "⚠️ No valid data in CSV.";
+          return;
+        }
+        clearMarkers();
+        let validPoints = 0;
+        for (let idx = 0; idx < data.length; idx++) {
+          const row = data[idx];
+          if (!row.Name && !row.Soil_Type) continue;
+          const coords = getLandCoordinate(row, idx);
+          const marker = L.marker(coords, { title: row.Name || "Soil Sample", riseOnHover: true });
+          
+          // Create popup with placeholder country
+          const baseHtml = buildPopupContentBase(row);
+          const popup = L.popup({ maxWidth: 380, minWidth: 260 }).setContent(baseHtml);
+          marker.bindPopup(popup);
+          
+          // When popup opens, fetch country name and update
+          marker.on('popupopen', async (e) => {
+            const popupObj = e.popup;
+            const latlng = marker.getLatLng();
+            // avoid duplicate fetches (check if already filled)
+            const container = popupObj._contentNode;
+            if (container && container.querySelector('.country-placeholder')?.innerText !== 'loading...') return;
+            try {
+              const country = await fetchCountryName(latlng.lat, latlng.lng);
+              updatePopupWithCountry(popupObj, country);
+            } catch (err) {
+              updatePopupWithCountry(popupObj, "unknown");
+            }
+          });
+          
+          markerClusterGroup.addLayer(marker);
+          currentMarkers.push(marker);
+          validPoints++;
+        }
+        document.getElementById('stats-indicator').innerHTML = `📈 Land‑based markers: ${validPoints} soil records (total ${data.length} rows)`;
+        if (validPoints > 0 && markerClusterGroup.getLayers().length > 0) {
+          setTimeout(() => {
+            try {
+              const bounds = markerClusterGroup.getBounds();
+              if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
+            } catch(e) {}
+          }, 100);
+        }
+      },
+      error: (err) => {
+        console.error(err);
+        document.getElementById('stats-indicator').innerHTML = "❌ CSV parse error.";
+      }
+    });
+  }
+
+  // File upload handler
+  function setupFileUpload() {
+    const fileInput = document.getElementById('file-input');
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        loadSoilDataFromCSV(e.target.result);
+      };
+      reader.readAsText(file, "UTF-8");
+      document.getElementById('stats-indicator').innerHTML = "⏳ Processing CSV...";
+    });
+  }
+
+  // Reset view button
+  function setupReset() {
+    document.getElementById('reset-view-btn').addEventListener('click', () => {
+      if (map) map.setView([20, 0], 2);
+    });
+  }
+
+  // Embedded sample data (first rows of your dataset)
+  function loadEmbeddedSample() {
+    const sampleCSV = `Name,Fertility,Photoperiod,Temperature,Rainfall,pH,Light_Hours,Light_Intensity,Rh,Nitrogen,Phosphorus,Potassium,Category_pH,Soil_Type,Season
+Strawberry,Moderate,Day Neutral,11.71136516,811.9189275,6.35188586,13.24578382,491.8972744,91.76778542,158.3991593,124.2293796,247.6265661,slightly_acidic,Loam,Summer
+Endive,High,Short Day Period,17.92319909,1055.394774,7.426369606,13.10447027,264.6112715,47.65269307,56.01953438,118.0114315,124.4696115,alkaline,Loam,Winter
+Spinach,High,Short Day Period,15.32427474,836.0555378,7.136015832,11.87434735,218.8475373,76.38605952,117.844523,63.15152467,62.08905651,neutral,Sandy Loam,Fall
+Spinach,High,Day Neutral,14.14686517,799.0792346,6.394812949,12.09258682,220.8473589,61.01242117,118.9705483,65.51236978,63.3753076,slightly_acidic,Sandy Loam,Spring
+Chard,High,Day Neutral,26.29912305,560.7113822,6.704252847,13.3381809,917.077521,46.80367851,205.6698077,215.076128,399.8553939,neutral,Sandy Clay Loam,Fall
+Broccoli,Moderate,Short Day Period,18.09654178,589.7241361,6.610742964,6.018903783,122.1621255,49.49585353,123.7980613,100.0347,139.9507736,neutral,Silt Loam,Winter
+Arugula,Moderate,Short Day Period,19.84514734,460.8294096,7.641135754,10.50063704,251.6483814,39.10711367,168.564038,335.2906198,151.569561,alkaline,Loam,Spring
+Cauliflowers,High,Short Day Period,27.19570722,985.1808939,6.480186823,7.496280463,360.7245737,54.63382154,155.1786616,57.06489071,182.2506979,slightly_acidic,Loam,Winter
+Radicchio,High,Short Day Period,17.71004326,1351.581309,7.04837718,7.02074283,141.1362794,93.75726806,124.8498591,41.24610254,91.74304543,neutral,Loam,Spring
+Cucumbers,High,Short Day Period,29.13606866,1026.229079,7.567594938,9.568577883,596.2026917,68.91323741,49.45391619,20.85010293,79.63138771,alkaline,Sandy Loam,Summer
+Kale,High,Short Day Period,17.99251219,571.9807332,5.648058266,9.452246619,66.24364788,93.74278859,153.4133911,72.52341927,130.327791,moderately_acidic,Loam,Winter
+Chilli Peppers,Moderate,Short Day Period,22.57303024,896.8374538,6.238500222,9.454891002,606.0242663,70.31413455,368.6929845,146.779742,483.7970528,slightly_acidic,Clay Loam,Spring
+Cabbage,High,Day Neutral,23.09572121,951.2947618,7.276270915,7.697566546,412.3136967,76.03150835,131.1522548,60.03290424,189.7554661,neutral,Loam,Spring
+Grapes,Moderate,Day Neutral,29.62945803,857.9136695,6.178979926,13.46744898,595.8570121,89.74745147,137.0239682,64.78008681,110.876538,slightly_acidic,Sandy Clay Loam,Summer
+Watermelon,Moderate,Day Neutral,34.82789768,585.48437,6.620042617,6.632433669,264.2118001,89.37246335,95.38271775,51.57546042,60.46496891,neutral,Sandy Loam,Summer`;
+    loadSoilDataFromCSV(sampleCSV);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    setupFileUpload();
+    setupReset();
+    loadEmbeddedSample();  // instant preview
+  });
+</script>
+</body>
+</html>

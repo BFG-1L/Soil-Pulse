@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soil Pulse · smart start</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      font-family: 'Inter', Arial, Helvetica, sans-serif;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #1a2e1f;
+    }
+
+    .parallax-bg {
+      position: absolute;
+      top: -5%;
+      left: -5%;
+      width: 110%;
+      height: 110%;
+      background-image: url('https://images.unsplash.com/photo-1464226184884-fa280b87c399');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      will-change: transform;
+      transition: transform 0.08s cubic-bezier(0.2, 0, 0, 1);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(1px);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .vignette {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.3) 120%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .content {
+      position: relative;
+      z-index: 3;
+      text-align: center;
+      color: white;
+      max-width: 800px;
+      padding: 2rem;
+      opacity: 0;
+      transform: translateY(25px);
+      animation: fadeInUp 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+      text-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+      /* Adjust vertical spacing to bring button into focus */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: clamp(3.5rem, 12vw, 5.5rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #ffffff 0%, #e0f0e0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-shadow: 0 4px 25px rgba(0, 40, 0, 0.6);
+    }
+
+    .tagline {
+      font-size: clamp(1rem, 4vw, 1.3rem);
+      font-weight: 400;
+      margin-bottom: 0.75rem;    /* reduced space between tagline and button */
+      opacity: 0.95;
+      letter-spacing: 0.3px;
+      backdrop-filter: blur(2px);
+      display: inline-block;
+      padding: 0.3rem 1.2rem;
+      border-radius: 60px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .start-btn {
+      padding: 1.1rem 3rem;       /* slightly larger button */
+      font-size: 1.2rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 50px;
+      background: #2e7d32;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 12px 30px -8px rgba(30, 70, 32, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+      transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.3s ease;
+      letter-spacing: 0.3px;
+      backdrop-filter: blur(4px);
+      margin-top: 0.5rem;         /* extra push down to emphasize center */
+    }
+
+    .start-btn:hover {
+      transform: scale(1.08) translateY(-3px);
+      background: #3c8c40;
+      box-shadow: 0 22px 40px -10px #1b4d1f, 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+    }
+
+    .start-btn:active {
+      transform: scale(1.02) translateY(0);
+      transition: 0.05s;
+    }
+
+    @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* subtle decorative line – keeps modern feel */
+    .content::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 25%;
+      width: 50%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #a5d6a7, transparent);
+      border-radius: 100%;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="parallax-bg" id="parallaxBg"></div>
+  <div class="overlay"></div>
+  <div class="vignette"></div>
+
+  <div class="content">
+    <h1>Soil Pulse</h1>
+    <!-- tagline now directly above the button with minimal spacing -->
+    <div class="tagline">Suitable crop for fertile soil</div>
+    <button class="start-btn" onclick="window.location.href='dashboard.html'">
+      Let's Get Started
+    </button>
+  </div>
+
+  <script>
+    (function() {
+      const bg = document.getElementById('parallaxBg');
+      let maxMoveX = window.innerWidth * 0.02;
+      let maxMoveY = window.innerHeight * 0.02;
+
+      function updateLimits() {
+        maxMoveX = window.innerWidth * 0.02;
+        maxMoveY = window.innerHeight * 0.02;
+      }
+      window.addEventListener('resize', updateLimits);
+
+      let rafScheduled = false;
+      function handleMouseMove(e) {
+        if (!rafScheduled) {
+          rafScheduled = true;
+          requestAnimationFrame(() => {
+            const normX = (e.clientX / window.innerWidth) * 2 - 1;
+            const normY = (e.clientY / window.innerHeight) * 2 - 1;
+
+            let moveX = -normX * maxMoveX;
+            let moveY = -normY * maxMoveY;
+
+            const clampX = maxMoveX * 1.2;
+            const clampY = maxMoveY * 1.2;
+            moveX = Math.min(clampX, Math.max(-clampX, moveX));
+            moveY = Math.min(clampY, Math.max(-clampY, moveY));
+
+            bg.style.transform = `translate(${moveX}px, ${moveY}px)`;
+            rafScheduled = false;
+          });
+        }
+      }
+
+      if (window.matchMedia('(pointer: fine)').matches) {
+        document.addEventListener('mousemove', handleMouseMove, { passive: true });
+      }
+
+      document.addEventListener('mouseleave', function() {
+        bg.style.transform = 'translate(0px, 0px)';
+      });
+
+      window.addEventListener('resize', () => {
+        updateLimits();
+        bg.style.transform = 'translate(0px, 0px)';
+      });
+    })();
+  </script>
+
+  <noscript>
+    <style>.parallax-bg { transform: none !important; }</style>
+  </noscript>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Pulse - Soil Evaluation</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #0a140a; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; position: relative; overflow-x: hidden; }
+        .spotlight { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), #1a3a1a 0%, #0a140a 60%); transition: background 0.05s ease; }
+        .card { max-width: 1400px; width: 100%; background: white; border-radius: 36px; box-shadow: 0 20px 60px rgba(0, 40, 0, 0.4); overflow: hidden; position: relative; z-index: 2; }
+        .header { background: #f5f7e9; padding: 24px 24px 12px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #d0e6d5; }
+        .logo h1 { font-size: 24px; font-weight: 700; color: #1e4a2f; }
+        .logo span { font-size: 14px; color: #4a6b4a; }
+        .soil-hero { background: #eaf4e4; padding: 12px 24px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #bcd0b2; }
+        .soil-icon { background: #5b8c5a; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; color: white; }
+        .soil-title { font-size: 26px; font-weight: 700; color: #1b4c1b; }
+        .content { padding: 24px; background: white; }
+        .params-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-bottom: 28px; }
+        .param-item { background: white; border-radius: 28px; padding: 18px 16px; box-shadow: 0 4px 12px rgba(0, 40, 10, 0.05); border: 1px solid #d5eadf; }
+        .param-item .label { font-size: 16px; font-weight: 600; color: #2c5e2c; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        select, input { width: 100%; padding: 10px; font-size: 16px; border: 2px solid #cde2d4; border-radius: 20px; margin-top: 5px; background: white; outline: none; }
+        select:focus, input:focus { border-color: #2e8b57; }
+        .evaluate-btn { background: #1f543e; color: white; border: none; width: 100%; padding: 18px; font-size: 22px; font-weight: 700; border-radius: 60px; margin: 15px 0; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 0 #0f2f1f; }
+        .evaluate-btn:hover { background: #2a6e50; transform: translateY(-2px); box-shadow: 0 10px 0 #0f2f1f; }
+        .result-box { background: #eef5ea; border-radius: 40px; padding: 20px; text-align: center; border: 2px solid #c2dbc2; margin-top: 10px; display: none; }
+        .result-status { font-size: 28px; font-weight: bold; padding: 15px; border-radius: 50px; background: #e0f0e0; color: #1d5e3a; }
+        .error-text { color: #b33; font-weight: bold; }
+
+        /* Chatbot styles (same as before) */
+        .chat-bot-button { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #2e8b57, #1d5e3a); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; border: 3px solid #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .chat-window { position: fixed; bottom: 120px; right: 30px; width: 350px; height: 500px; background: white; border-radius: 20px; display: none; flex-direction: column; z-index: 1001; border: 2px solid #2e8b57; animation: slideIn 0.3s ease; }
+        .chat-window.open { display: flex; }
+        .chat-header { background: linear-gradient(135deg, #2e8b57, #1d5e3a); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .close-chat { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #f9fdfb; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 0.95em; line-height: 1.4; }
+        .bot-message { background: #e3f2e9; color: #1d4b2e; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .user-message { background: #2e8b57; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-input-area { padding: 20px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; }
+        .chat-input-area input { flex: 1; padding: 12px; border: 2px solid #b8d9c5; border-radius: 25px; outline: none; }
+        .chat-input-area button { background: #2e8b57; color: white; border: none; border-radius: 25px; padding: 0 20px; cursor: pointer; }
+        .notification-badge { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="spotlight" id="spotlight"></div>
+
+<!-- Chatbot button & window -->
+<div class="chat-bot-button" id="chatButton">
+    <div class="notification-badge">1</div>
+    <span style="font-size: 35px;">💬</span>
+</div>
+<div class="chat-window" id="chatWindow">
+    <div class="chat-header">
+        <h3>🌱 Soil AI</h3>
+        <button class="close-chat" id="closeChatBtn">✕</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+        <div class="message bot-message">👋 Hello! I'm Soil AI</div>
+        <div class="message bot-message">Ask me about soil science, crop recommendations, or farming advise.</div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Your question...">
+        <button id="sendBtn">Send</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="header">
+        <div class="logo"><h1>Soil Pulse</h1><span>Soil Health First</span></div>
+    </div>
+    <div class="soil-hero">
+        <div class="soil-icon">🪴</div>
+        <div class="soil-title">Soil Evaluation</div>
+    </div>
+
+    <div class="content">
+        <div class="params-grid">
+            <!-- Categorical dropdowns -->
+            <div class="param-item"><div class="label">🌾 Fertility</div>
+                <select id="fertility">
+                    <option value="Low">Low</option><option value="Moderate" selected>Moderate</option><option value="High">High</option>
+                </select>
+            </div>
+            <div class="param-item"><div class="label">☀️ Photoperiod</div>
+                <select id="photoperiod">
+                    <option value="Day Neutral">Day Neutral</option><option value="Long Day Period">Long Day Period</option><option value="Short Day Period">Short Day Period</option>
+                </select>
+            </div>
+            <div class="param-item"><div class="label">🧪 Category pH</div>
+                <select id="category_ph">
+                    <option value="alkaline">Alkaline</option><option value="low_acidic">Low Acidic</option><option value="neutral" selected>Neutral</option><option value="slightly_acidic">Slightly Acidic</option>
+                </select>
+            </div>
+            <div class="param-item"><div class="label">🌍 Soil Type</div>
+                <select id="soil_type">
+                    <option value="Clay">Clay</option><option value="Clay Loam">Clay Loam</option><option value="Loam" selected>Loam</option><option value="Sandy">Sandy</option>
+                    <option value="Sandy Clay">Sandy Clay</option><option value="Sandy Clay Loam">Sandy Clay Loam</option><option value="Sandy Loam">Sandy Loam</option>
+                    <option value="Silt Loam">Silt Loam</option><option value="Silty Clay">Silty Clay</option>
+                </select>
+            </div>
+            <div class="param-item"><div class="label">🍂 Season</div>
+                <select id="season">
+                    <option value="Spring">Spring</option><option value="Summer">Summer</option><option value="Fall">Fall</option><option value="Winter">Winter</option>
+                </select>
+            </div>
+
+            <!-- Numeric inputs -->
+            <div class="param-item"><div class="label">🌡️ Temperature (°C)</div><input type="number" id="temperature" step="0.1" value="25"></div>
+            <div class="param-item"><div class="label">☔ Rainfall (mm)</div><input type="number" id="rainfall" step="0.1" value="1200"></div>
+            <div class="param-item"><div class="label">⚖️ pH (numeric)</div><input type="number" id="ph" step="0.1" value="6.5"></div>
+            <div class="param-item"><div class="label">💡 Light Hours (hrs)</div><input type="number" id="light_hours" step="0.1" value="8"></div>
+            <div class="param-item"><div class="label">🔆 Light Intensity (lux)</div><input type="number" id="light_intensity" step="100" value="5000"></div>
+            <div class="param-item"><div class="label">💧 Relative Humidity (%)</div><input type="number" id="rh" step="0.1" value="65"></div>
+            <div class="param-item"><div class="label">🧪 Nitrogen (ppm)</div><input type="number" id="nitrogen" step="1" value="50"></div>
+            <div class="param-item"><div class="label">🔬 Phosphorus (ppm)</div><input type="number" id="phosphorus" step="1" value="30"></div>
+            <div class="param-item"><div class="label">⚗️ Potassium (ppm)</div><input type="number" id="potassium" step="1" value="40"></div>
+        </div>
+
+        <button class="evaluate-btn" id="evaluateBtn">🌱 Predict Suitable Crop</button>
+
+        <div id="resultBox" class="result-box">
+            <div class="result-title">🌾 Recommended Crop</div>
+            <div id="resultStatus" class="result-status"></div>
+            <div id="resultDetails" class="result-details" style="margin-top:10px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Spotlight effect
+    const spotlight = document.getElementById('spotlight');
+    document.addEventListener('mousemove', (e) => {
+        spotlight.style.setProperty('--x', e.clientX + 'px');
+        spotlight.style.setProperty('--y', e.clientY + 'px');
+    });
+
+    // Prediction using fetch (JSON API)
+    async function evaluateSoil() {
+        const formData = new FormData();
+        formData.append('Fertility', document.getElementById('fertility').value);
+        formData.append('Photoperiod', document.getElementById('photoperiod').value);
+        formData.append('Category_pH', document.getElementById('category_ph').value);
+        formData.append('Soil_Type', document.getElementById('soil_type').value);
+        formData.append('Season', document.getElementById('season').value);
+        formData.append('Temperature', document.getElementById('temperature').value);
+        formData.append('Rainfall', document.getElementById('rainfall').value);
+        formData.append('pH', document.getElementById('ph').value);
+        formData.append('Light_Hours', document.getElementById('light_hours').value);
+        formData.append('Light_Intensity', document.getElementById('light_intensity').value);
+        formData.append('Rh', document.getElementById('rh').value);
+        formData.append('Nitrogen', document.getElementById('nitrogen').value);
+        formData.append('Phosphorus', document.getElementById('phosphorus').value);
+        formData.append('Potassium', document.getElementById('potassium').value);
+
+        const resultBox = document.getElementById('resultBox');
+        const resultStatus = document.getElementById('resultStatus');
+        const resultDetails = document.getElementById('resultDetails');
+
+        resultBox.style.display = 'block';
+        resultStatus.innerHTML = '🌱 Predicting...';
+        resultDetails.innerHTML = '';
+
+        try {
+            const response = await fetch('/predict_soil', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+            const data = await response.json();
+            if (data.error) {
+                resultStatus.innerHTML = '⚠️ Error';
+                resultDetails.innerHTML = data.error;
+            } else {
+                resultStatus.innerHTML = `${data.predicted_crop}<br><span style="font-size:0.6em;">Confidence: ${data.confidence}%</span>`;
+                resultDetails.innerHTML = '';
+            }
+        } catch (err) {
+            resultStatus.innerHTML = '⚠️ Connection Error';
+            resultDetails.innerHTML = err.message;
+        }
+    }
+
+    document.getElementById('evaluateBtn').addEventListener('click', evaluateSoil);
+
+    // ========== CHATBOT LOGIC (same as before) ==========
+    const chatButton = document.getElementById('chatButton');
+    const chatWindow = document.getElementById('chatWindow');
+    const closeChatBtn = document.getElementById('closeChatBtn');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatMessages = document.getElementById('chatMessages');
+
+    chatButton.addEventListener('click', () => {
+        chatWindow.classList.add('open');
+        const badge = chatButton.querySelector('.notification-badge');
+        if (badge) badge.style.display = 'none';
+    });
+    closeChatBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
+    document.addEventListener('click', (e) => {
+        if (!chatWindow.contains(e.target) && !chatButton.contains(e.target) && chatWindow.classList.contains('open')) {
+            chatWindow.classList.remove('open');
+        }
+    });
+
+    function addMessage(text, isUser) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+        msgDiv.innerText = text;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    let typingIndicator = null;
+    function showTyping() {
+        if (typingIndicator) removeTyping();
+        typingIndicator = document.createElement('div');
+        typingIndicator.className = 'message bot-message';
+        typingIndicator.innerText = '🌱 typing...';
+        chatMessages.appendChild(typingIndicator);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    function removeTyping() {
+        if (typingIndicator) { typingIndicator.remove(); typingIndicator = null; }
+    }
+
+    async function sendMessageToAI(userMessage) {
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: userMessage })
+            });
+            const data = await response.json();
+            return data.reply || "I'm not sure how to respond.";
+        } catch (err) {
+            return "⚠️ Connection error. Please try again.";
+        }
+    }
+
+    async function handleSendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+        chatInput.value = '';
+        addMessage(message, true);
+        showTyping();
+        const reply = await sendMessageToAI(message);
+        removeTyping();
+        addMessage(reply, false);
+    }
+
+    sendBtn.addEventListener('click', handleSendMessage);
+    chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendMessage(); });
+    chatInput.disabled = false;
+</script>
+</body>
+</html>

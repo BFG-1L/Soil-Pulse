@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Pulse · Crop Requirements</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #0a140a; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; position: relative; }
+        .spotlight {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1;
+            background: radial-gradient(circle at var(--x,50%) var(--y,50%), #1a3a1a 0%, #0a140a 60%);
+        }
+        .container { max-width: 1200px; width: 100%; background: white; border-radius: 36px; padding: 30px; box-shadow: 0 20px 60px rgba(0,40,0,0.4); z-index: 2; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #d0e6d5; padding-bottom: 20px; }
+        .header h1 { color: #1d4b2e; font-size: 2.5em; }
+        .stats-panel {
+            background: #e8f3ec; padding: 20px; border-radius: 28px; margin-bottom: 30px;
+            display: flex; justify-content: space-around; text-align: center; flex-wrap: wrap; gap: 15px;
+        }
+        .stat-card { background: white; padding: 15px; border-radius: 24px; min-width: 120px; }
+        .stat-number { font-size: 32px; font-weight: 700; color: #1d5e3a; }
+        .stat-label { color: #2a5a39; font-weight: 500; }
+        label { font-weight: 600; color: #1d4b2e; display: block; margin: 20px 0 10px; }
+        select {
+            width: 100%; padding: 15px; border: 2px solid #b8d9c5; border-radius: 20px;
+            font-size: 1em; background: white; cursor: pointer; margin-bottom: 20px;
+        }
+        .info-card {
+            background: #f6fbf8; border-radius: 32px; padding: 25px; margin-top: 20px;
+            border-left: 8px solid #2e8b57; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .info-item {
+            background: white;
+            border-radius: 20px;
+            padding: 15px;
+            border: 1px solid #d0e6d5;
+        }
+        .info-item h4 {
+            color: #2e8b57;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            border-bottom: 1px solid #e0f0e0;
+            padding-bottom: 5px;
+        }
+        .info-item p {
+            color: #3a5a3a;
+            font-size: 0.95em;
+            margin: 8px 0;
+        }
+        .footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #d0e6d5; color: #2a5a39; }
+
+        /* Chatbot styles */
+        .chat-bot-button { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #2e8b57, #1d5e3a); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; border: 3px solid #fff; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .chat-window { position: fixed; bottom: 120px; right: 30px; width: 350px; height: 500px; background: white; border-radius: 20px; display: none; flex-direction: column; z-index: 1001; border: 2px solid #2e8b57; animation: slideIn 0.3s ease; }
+        .chat-window.open { display: flex; }
+        .chat-header { background: linear-gradient(135deg, #2e8b57, #1d5e3a); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .close-chat { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #f9fdfb; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 0.95em; line-height: 1.4; }
+        .bot-message { background: #e3f2e9; color: #1d4b2e; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .user-message { background: #2e8b57; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .chat-input-area { padding: 20px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 10px; }
+        .chat-input-area input { flex: 1; padding: 12px; border: 2px solid #b8d9c5; border-radius: 25px; outline: none; }
+        .chat-input-area button { background: #2e8b57; color: white; border: none; border-radius: 25px; padding: 0 20px; cursor: pointer; }
+        .notification-badge { position: absolute; top: -5px; right: -5px; background: #ff4444; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 700px) {
+            .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="spotlight" id="spotlight"></div>
+
+<!-- Chatbot button & window -->
+<div class="chat-bot-button" id="chatButton">
+    <div class="notification-badge">1</div>
+    <span style="font-size: 35px;">💬</span>
+</div>
+<div class="chat-window" id="chatWindow">
+    <div class="chat-header">
+        <h3>🌱 Crop AI</h3>
+        <button class="close-chat" id="closeChatBtn">✕</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+        <div class="message bot-message">👋 Hello! I'm Crop AI</div>
+        <div class="message bot-message">Ask me about crop requirements, soil conditions, or farming tips.</div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="Your question...">
+        <button id="sendBtn">Send</button>
+    </div>
+</div>
+
+<div class="container">
+    <div class="header">
+        <h1>🌱 Crop<span style="color:#2e8b57;">Pulse</span></h1>
+        <p>Optimal soil & climate requirements for each crop</p>
+    </div>
+
+    <div class="stats-panel">
+        <div class="stat-card"><div class="stat-number">{{ stats.total_samples }}</div><div class="stat-label">Total Crop Types</div></div>
+        <div class="stat-card"><div class="stat-number">{{ stats.model_type }}</div><div class="stat-label">Model</div></div>
+    </div>
+
+    <label for="crop-select">🌾 Select a crop to see its recommended soil and environmental parameters</label>
+    <select id="crop-select">
+        <option value="">-- Choose a crop --</option>
+    </select>
+
+    <div id="info-container">
+        <div class="info-card" style="text-align:center; color:#5a7a5a;">
+            🌿 Select a crop from the dropdown to view its ideal growing conditions.
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Soil Pulse — data sourced from real cultivation studies and machine learning insights.</p>
+    </div>
+</div>
+
+<script>
+    // Spotlight
+    const spotlight = document.getElementById('spotlight');
+    document.addEventListener('mousemove', (e) => {
+        spotlight.style.setProperty('--x', e.clientX + 'px');
+        spotlight.style.setProperty('--y', e.clientY + 'px');
+    });
+
+    let cropStats = {};
+    let fallbackCrops = [];
+
+    // Fetch crop statistics from backend API
+    async function loadCropData() {
+        try {
+            const response = await fetch('/api/crop_stats');
+            const data = await response.json();
+            cropStats = data.crop_stats || {};
+            fallbackCrops = data.fallback_crops || [];
+            populateDropdown();
+        } catch (err) {
+            console.error('Failed to load crop data:', err);
+            cropStats = {};
+            fallbackCrops = [];
+            populateDropdown();
+        }
+    }
+
+    function populateDropdown() {
+        const select = document.getElementById('crop-select');
+        // Keep only the first placeholder option
+        while (select.options.length > 1) select.remove(1);
+        let crops = Object.keys(cropStats);
+        if (crops.length === 0 && fallbackCrops.length > 0) {
+            crops = fallbackCrops;
+        }
+        if (crops.length === 0) {
+            const option = document.createElement('option');
+            option.value = "";
+            option.textContent = "No crop data available";
+            select.appendChild(option);
+            return;
+        }
+        crops.forEach(crop => {
+            const option = document.createElement('option');
+            option.value = crop;
+            option.textContent = crop;
+            select.appendChild(option);
+        });
+    }
+
+    function displayCropInfo() {
+        const select = document.getElementById('crop-select');
+        const selectedCrop = select.value;
+        const container = document.getElementById('info-container');
+
+        if (!selectedCrop) {
+            container.innerHTML = `<div class="info-card" style="text-align:center;">🌾 Please select a crop</div>`;
+            return;
+        }
+
+        const stats = cropStats[selectedCrop];
+        if (!stats || Object.keys(stats).length === 0) {
+            container.innerHTML = `<div class="info-card" style="text-align:center;">ℹ️ Detailed statistics for ${selectedCrop} are currently unavailable. Please try again later.</div>`;
+            return;
+        }
+
+        let html = `<div class="info-card"><h3 style="color:#2e8b57;">${selectedCrop}</h3><div class="info-grid">`;
+
+        // Numeric fields
+        const numericFields = ['Temperature', 'Rainfall', 'pH', 'Light_Hours', 'Light_Intensity', 'Rh', 'Nitrogen', 'Phosphorus', 'Potassium'];
+        for (let field of numericFields) {
+            if (stats[field]) {
+                html += `
+                    <div class="info-item">
+                        <h4>${field.replace(/_/g, ' ')}</h4>
+                        <p><strong>Range:</strong> ${stats[field].min} – ${stats[field].max}</p>
+                        <p><strong>Typical:</strong> ${stats[field].mean}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Categorical fields
+        const catFields = ['Fertility', 'Photoperiod', 'Category_pH', 'Soil_Type', 'Season'];
+        for (let field of catFields) {
+            if (stats[field]) {
+                html += `
+                    <div class="info-item">
+                        <h4>${field.replace(/_/g, ' ')}</h4>
+                        <p><strong>Common value:</strong> ${stats[field].mode}</p>
+                    </div>
+                `;
+            }
+        }
+
+        html += `</div></div>`;
+        container.innerHTML = html;
+    }
+
+    // Load data and initialize
+    loadCropData();
+
+    document.getElementById('crop-select').addEventListener('change', displayCropInfo);
+
+    // ========== CHATBOT LOGIC ==========
+    const chatButton = document.getElementById('chatButton');
+    const chatWindow = document.getElementById('chatWindow');
+    const closeChatBtn = document.getElementById('closeChatBtn');
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatMessages = document.getElementById('chatMessages');
+
+    chatButton.addEventListener('click', () => {
+        chatWindow.classList.add('open');
+        const badge = chatButton.querySelector('.notification-badge');
+        if (badge) badge.style.display = 'none';
+    });
+    closeChatBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
+    document.addEventListener('click', (e) => {
+        if (!chatWindow.contains(e.target) && !chatButton.contains(e.target) && chatWindow.classList.contains('open')) {
+            chatWindow.classList.remove('open');
+        }
+    });
+
+    function addMessage(text, isUser) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+        msgDiv.innerText = text;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    let typingIndicator = null;
+    function showTyping() {
+        if (typingIndicator) removeTyping();
+        typingIndicator = document.createElement('div');
+        typingIndicator.className = 'message bot-message';
+        typingIndicator.innerText = '🌱 typing...';
+        chatMessages.appendChild(typingIndicator);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    function removeTyping() {
+        if (typingIndicator) { typingIndicator.remove(); typingIndicator = null; }
+    }
+
+    async function sendMessageToAI(userMessage) {
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: userMessage })
+            });
+            const data = await response.json();
+            return data.reply || "I'm not sure how to respond.";
+        } catch (err) {
+            return "⚠️ Connection error. Please try again.";
+        }
+    }
+
+    async function handleSendMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+        chatInput.value = '';
+        addMessage(message, true);
+        showTyping();
+        const reply = await sendMessageToAI(message);
+        removeTyping();
+        addMessage(reply, false);
+    }
+
+    sendBtn.addEventListener('click', handleSendMessage);
+    chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendMessage(); });
+    chatInput.disabled = false;
+</script>
+</body>
+</html>
